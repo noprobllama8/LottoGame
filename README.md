@@ -1,5 +1,6 @@
 # Lotto Game
-A simple lotto game developed for Computer networks course.
+A simple distributed client-server application developed for Computer networks course.
+The application allow to do and send playsto a remote server that memorize them, do extractions and elaborate the winnings, by notifying the players of the amount.
 
 # Installation
 To build project:
