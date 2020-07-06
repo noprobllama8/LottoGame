@@ -34,21 +34,27 @@ int main(int argc, char const *argv[]){
 	sv_addr.sin_port = htons(atoi(argv[2]));
 	inet_pton(AF_INET, argv[1], &sv_addr.sin_addr);
 	
+	//Richiesta di connessione con il server 
 	ret = connect(sd, (struct sockaddr*)&sv_addr, sizeof(sv_addr));
 	if(ret < 0){
-		perror("Connect errata!\n");
+		perror("Impossibile connettersi con il server %s sulla porta %s!\n",argv[1],argv[2]);
 		exit(1);
 	}
 	
+	//Dopo aver effettuato la richiesta di connessione al server, il client riceve il flag bloccato
+	//dal server che gli notifica o meno se è appunto bloccato o meno
 	bloccato = recvFromServerFlag(sd);
 	
+	//Se il client è bloccato la socket viene chiusa subito
 	if(bloccato){
 		printf("Sei stato bloccato aspetta ancora!\n");
 	}else{
+		//Altrimenti la connessione viene instaurata con successo e il client può interagire con l'applicazione
 		printf("Connessione al server %s (porta %s) effettuata con successo\n\n",argv[1],argv[2]);
 		
 		memset(&buffer, '\0', sizeof(buffer));
 	
+		//Il client visualizza il menù dell'applicazione con tutti i comandi che si possono effettuare
 		welcome();
 	
 		while(1){
@@ -56,7 +62,11 @@ int main(int argc, char const *argv[]){
 			printf("> ");
 		
 			scanf("%s", buffer);
+			
+			//Assegnamento del carattere corrispondente al comando appena letto dalla scanf
 			c = AssegnaLettera(buffer);
+			
+			//Invio al server del carattere corrisponde al comando
 			SendToServerCmd(sd, c);
 		}
 	}	
