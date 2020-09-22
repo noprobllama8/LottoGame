@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 #include "library.h"
 
 int main(int argc, char const *argv[]){
@@ -37,7 +38,7 @@ int main(int argc, char const *argv[]){
 	//Richiesta di connessione con il server 
 	ret = connect(sd, (struct sockaddr*)&sv_addr, sizeof(sv_addr));
 	if(ret < 0){
-		perror("Impossibile connettersi con il server %s sulla porta %s!\n",argv[1],argv[2]);
+		printf("Impossibile connettersi con il server %s sulla porta %s!\n",argv[1],argv[2]);
 		exit(1);
 	}
 	

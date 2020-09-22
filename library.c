@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
+#include <math.h>
 #include "library.h"
 
 /*******************************************************************/
@@ -18,11 +19,17 @@ void sendTo(int sd, char *buffer){
 	
 	int len, ret;
 	char dim[2];
+
+	//printf("[sendTo] buffer - %s\n", buffer);
 	
 	len = strlen(buffer)+1;					//lunghezza del buffer
+
+	//printf("[sendTo] len - %d\n", len);
 	
 	memset(&dim, '\0', sizeof(dim));
 	sprintf(dim, "%d", len);            	//conversione int to string
+
+	//printf("[sendTo] dim - %s\n", dim);
 	
 	ret = send(sd, (void*)dim, 2, 0);
 	if(ret < 0){
@@ -348,7 +355,7 @@ bool logoutUsers(struct user **p0, char *username){
 					if(p->blocked == 0){								//e se il campo bloccato all'interno dell'elemento della lista è ancora a false
 						memset(&p->sessionId, '\0', sizeof(p->sessionId));
 						p->online = 0;									//pongo il campo online dell'elemento corrispondente a true
-						printf("L'utente %s ha effettuato il logout, E' offline.\n", p->username);
+						printf("[LOG] L'utente %s ha effettuato il logout, E' offline.\n", p->username);
 						return 1;
 					}
 				}
@@ -362,7 +369,7 @@ bool logoutUsers(struct user **p0, char *username){
 //funzione di creazione del file registro
 void createFileRegister(struct user *p0){
 		
-	FILE *file = fopen("UsersRegister.txt", "a");
+	FILE *file = fopen("FileRegistri/UsersRegister.txt", "a");
 	if(file == NULL){
 		printf("[LOG] Impossibile creare il file!\n");
 		exit(1);		
@@ -370,7 +377,7 @@ void createFileRegister(struct user *p0){
 	
 	fprintf(file, "%s\n%s\n%s\n", p0->cl_ip, p0->username, p0->password);
 	
-	printf("[LOG] Creazione e salvataggio del file degli UTENTI REGISTRATI avvenuto con successo!\n");
+	printf("[LOG] Un nuovo utente è stato registrato\n");
 	
 	fclose(file);
 }
@@ -378,7 +385,7 @@ void createFileRegister(struct user *p0){
 //funzione di creazione del file registro degli utenti bloccati
 void createFileBlocked(char *cl_addr, time_t seconds){
 	
-	FILE *file = fopen("ClientBlocked.txt", "a");
+	FILE *file = fopen("FileRegistri/ClientBlocked.txt", "a");
 	if(file == NULL){
 		printf("[LOG] Impossibile creare il file!\n");
 		exit(1);
@@ -386,7 +393,7 @@ void createFileBlocked(char *cl_addr, time_t seconds){
 	
 	fprintf(file, "%s\n%ld\n", cl_addr, seconds);	
 	
-	printf("[LOG] Creazione e salvataggio del file dei CLIENT BLOCCATI avvenuto con successo!\n");
+	printf("[LOG] Un utente e' stato bloccato\n");
 	
 	fclose(file);
 }
@@ -396,7 +403,7 @@ void createFileGiocate(struct giocata *g0){
 
 	int cont;
 	
-	FILE *file = fopen("UsersGiocate.txt", "a");
+	FILE *file = fopen("FileRegistri/UsersGiocate.txt", "a");
 	if(file == NULL){
 		printf("[LOG] Impossibile creare il file!\n");
 		exit(1);
@@ -442,7 +449,7 @@ void createFileGiocate(struct giocata *g0){
 		}
 	}
 		
-	printf("[LOG] Creazione e salvataggio del file delle GIOCATE avvenuto con successo!\n");
+	printf("[LOG] La giocata è stata archiviata\n");
 	
 	fclose(file);
 }
@@ -451,7 +458,7 @@ void createFileGiocate(struct giocata *g0){
 void createFileVincite(struct vincita *v0){
 	int cont;
 	
-	FILE *file = fopen("UsersVincite.txt", "a");
+	FILE *file = fopen("FileRegistri/UsersVincite.txt", "a");
 	if(file == NULL){
 		printf("Impossibile creare il file!\n");
 		exit(1);
@@ -488,7 +495,7 @@ void createFileVincite(struct vincita *v0){
 		}
 	}
 		
-	printf("[LOG] Creazione e salvataggio del file delle VINCITE avvenuto con successo!\n");
+	printf("[LOG] Nuova vincita avvenuta\n");
 	
 	fclose(file);
 }
@@ -497,7 +504,7 @@ void createFileVincite(struct vincita *v0){
 void createFileEstrazioni(int n_giorno, int giorno, int mese, int anno, int hour, int min, int sec, int **m){
 	int i, j;
 	
-	FILE *file = fopen("Estrazioni.txt", "a");
+	FILE *file = fopen("FileRegistri/Estrazioni.txt", "a");
 	if(file == NULL){
 		printf("[LOG] Impossibile creare il file!\n");
 		exit(1);
@@ -513,7 +520,7 @@ void createFileEstrazioni(int n_giorno, int giorno, int mese, int anno, int hour
 		fprintf(file, "\n");
 	}
 	
-	printf("[LOG] Creazione e salvataggio del file delle ESTRAZIONI avvenuto con successo!\n");
+	printf("[LOG] Nuova estrazione avvenuta\n");
 	
 	fclose(file);
 }
@@ -557,6 +564,8 @@ void registerGiocata(struct giocata **g0, char *username, int n_giorno, int gior
 	
 	if(mode)
 		createFileGiocate(q);
+
+	//free(q);
 }
 
 //Funzione per la registrazione del client
@@ -589,11 +598,15 @@ void registerUsers(char *cl_addr, struct user **p0, char *username, char *passwo
 		createFileRegister(q);
 		printf("[LOG] L'utente %s si e' registrato\n", q->username);
 	}
+
+	//free(q);
 }
 
 //Funzione per la registrazione della vincita del dato user
 void registerVincita(struct vincita **v0, char *username, int giorno, int mese, int anno, int hour, int min, char *ruota, struct numeri *n0, struct importi *i0, bool mode){
 	struct vincita *q, *p;
+	/*struct numeri *num, *nrem;
+	struct importi *impo, *irem;*/
 	
 	for(q = *v0; q != 0; q = q->next)
 		p = q;
@@ -623,6 +636,26 @@ void registerVincita(struct vincita **v0, char *username, int giorno, int mese, 
 	
 	if(mode)
 		createFileVincite(q);
+
+	//deallocazione
+	/*num = q->num;
+	
+	while(num){
+		nrem = num;
+		num = num->next;
+		free(nrem);
+	}
+	q->num = 0;
+
+	impo = q->impo;
+	while(impo){
+		irem = impo;
+		impo = impo->next;
+		free(irem);
+	}
+	q->impo = 0;
+
+	free(q);*/
 }
 
 //Funzione di riempimento della lista delle ruote
@@ -641,6 +674,8 @@ void fillListaRuote(struct ruote **r0, char *ruota){
 		*r0 = q;
 	else
 		p->next = q;
+
+	//free(q);
 }
 
 //Funzione di riempimento della lista dei numeri
@@ -659,6 +694,8 @@ void fillListaNumeri(struct numeri **n0, int numero){
 		*n0 = q;
 	else
 		p->next = q;
+
+	//free(q);
 }
 
 //Funzione di riempimento della lista dei numeri
@@ -678,6 +715,8 @@ void fillListaImporti(struct importi **i0, double importo, int tipo){
 		*i0 = q;
 	else
 		p->next = q;
+
+	//free(q);
 }
 
 //Funzione di riempimento della lista delle estrazioni
@@ -711,6 +750,8 @@ void fillListaEstrazioni(struct estrazioni **e0, int n_giorno, int giorno, int m
 		*e0 = q;
 	else
 		p->next = q;
+
+	//free(q);
 }
 
 //Funzione di log delle richieste del client
@@ -754,13 +795,6 @@ int fatt(int n){
 
 //Funzione che calcola le combinazioni senza ripetizioni di n su k numeri
 double combinazioniNoRep(int n, int k){
-
-	/*if(k > n)
-		return -1.0;
-	if(k < 0 || n < 0)
-		return -1.0;
-	if(k > 5)
-		return -1.0;*/
 	
 	double combNoRip = 0;
 	
@@ -792,7 +826,7 @@ void pipeToFather(int piped, int n_giorno, int giorno, int mese, int anno, int h
 }
 
 //Funzione per la registrazione della vincita
-void AssegnaVincita(struct giocata *vecchie, struct vincita **vincite, char **ruota, int **m){
+void AssegnaVincita(struct giocata **vecchie, struct vincita **vincite, char **ruota, int **m){
 	
 	struct giocata *g;
 	struct ruote *r;
@@ -800,122 +834,122 @@ void AssegnaVincita(struct giocata *vecchie, struct vincita **vincite, char **ru
 	struct importi *impo0, *impo;
 	int contaN, j, k, cnum;
 	double importo, comb;
+
+	g = *vecchie;
+	while(g->next != NULL){
+		g = g->next;	
+	}
 	
-	g = vecchie;
-	
-	while(g){
-		for(r = g->r; r; r = r->next){
-			contaN = 0;
-			cnum = 0;
+	for(r = g->r; r; r = r->next){
+
+		contaN = 0;
+		cnum = 0;
+		num0 = 0;
+		impo0 = 0;
 			
-			num0 = 0;
-			impo0 = 0;
-				
-			for(j = 0; j < 11; j++){
-				if(!strcmp(r->nome_ruota, ruota[j])){
-					break;
-				}
+		//Ricavo dell'indice j così da sapere la riga della matrice dei numeri vincenti
+		for(j = 0; j < 11; j++){
+			if(!strcmp(r->nome_ruota, ruota[j])){
+				break;
 			}
-				
-			//Conteggio dei numeri giocati che sono vincenti
-			for(num = g->num; num; num = num->next){
+		}
+
+		//Conteggio dei numeri giocati che sono vincenti
+		for(num = g->num; num != 0; num = num->next){
+			for(k = 0; k < 5; k++){
+				if(num->numero == m[j][k]){
+					contaN++;
+				}
+			}												
+		}
+		
+		if(contaN > 0){
+			for(num = g->num; num != 0; num = num->next){
 				for(k = 0; k < 5; k++){
 					if(num->numero == m[j][k]){
-						contaN++;
+						cnum++;
+						fillListaNumeri(&num0, num->numero);
 					}
 				}												
 			}
+
+			importo = 0.0;
+			comb = 0.0;
 			
-			if(contaN > 0){
-				for(num = g->num; num; num = num->next){
-					for(k = 0; k < 5; k++){
-						if(num->numero == m[j][k]){
-							cnum++;
-							fillListaNumeri(&num0, num->numero);
-						}
-					}												
-				}
+			for(impo = g->impo; impo != 0; impo = impo->next){
+				comb = combinazioniNoRep(cnum, impo->tipo);
 				
-				importo = 0.0;
-				comb = 0.0;
-				
-				for(impo = g->impo; impo; impo = impo->next){
-					comb = combinazioniNoRep(cnum, impo->tipo);
-					
-					//L'utente ha indovinato un numero su 5
-					if(cnum == 1){
-						if(impo->tipo == 1 && impo->importo > 0.0){
-							importo = impo->importo * 11.23 * cnum;
-						}else{
-							importo = 0.0;
-						}
-					//L'utente ha indovinato due numeri su 5
-					}else if(cnum == 2){
-						if(impo->tipo == 1 && impo->importo > 0.0){
-							importo = impo->importo * 11.23 * cnum;
-						}else if(impo->tipo == 2 && impo->importo >  0.0){
-							importo = impo->importo * 250.00;
-						}else{
-							importo = 0.0;
-						}
-					//L'utente ha indovinato tre numeri su 5
-					}else if(cnum == 3){
-						if(impo->tipo == 1 && impo->importo > 0.0){
-							importo = impo->importo * 11.23 * cnum;
-						}else if(impo->tipo == 2 && impo->importo > 0.0){
-							importo = (impo->importo * 250.00) / (comb);
-						}else if(impo->tipo == 3 && impo->importo > 0.0){
-							importo = impo->importo * 4500.00;
-						}else{
-							importo = 0.0;
-						}
-					//L'utente ha indovinato quattro numeri su 5
-					}else if(cnum == 4){
-						if(impo->tipo == 1 && impo->importo > 0.0){
-							importo = impo->importo * 11.23 * cnum;
-						}else if(impo->tipo == 2 && impo->importo > 0.0){
-							importo = (impo->importo * 250.00) / (comb);
-						}else if(impo->tipo == 3 && impo->importo > 0.0){
-							importo = (impo->importo * 4500.00) / (comb);
-						}else if(impo->tipo == 4 && impo->importo > 0.0){
-							importo = impo->importo * 120000.00;
-						}else{
-							importo = 0.0;
-						}
-					//L'utente ha indovinato cinque numeri su 5
-					}else if(cnum == 5){
-						if(impo->tipo == 1 && impo->importo > 0.0){
-							importo = impo->importo * 11.23 * cnum;
-						}else if(impo->tipo == 2 && impo->importo > 0.0){
-							importo = (impo->importo * 250.00) / (comb);
-						}else if(impo->tipo == 3 && impo->importo > 0.0){
-							importo = (impo->importo * 4500.00) / (comb);
-						}else if(impo->tipo == 4 && impo->importo > 0.0){
-							importo = (impo->importo * 120000.00) / (comb);
-						}else if(impo->tipo == 5 && impo->importo > 0.0){
-							importo = impo->importo * 6000000.00;
-						}else{
-							importo = 0.0;
-						}
+				//L'utente ha indovinato un numero su 5
+				if(cnum == 1){
+					if(impo->tipo == 1 && impo->importo > 0.0){
+						importo = impo->importo * 11.23 * cnum;
+					}else{
+						importo = 0.0;
 					}
-					//Inserimento dei dati calcolati nella lista degli importi
-					fillListaImporti(&impo0, importo, impo->tipo);
+				//L'utente ha indovinato due numeri su 5
+				}else if(cnum == 2){
+					if(impo->tipo == 1 && impo->importo > 0.0){
+						importo = impo->importo * 11.23 * cnum;
+					}else if(impo->tipo == 2 && impo->importo >  0.0){
+						importo = impo->importo * 250.00;
+					}else{
+						importo = 0.0;
+					}
+				//L'utente ha indovinato tre numeri su 5
+				}else if(cnum == 3){
+					if(impo->tipo == 1 && impo->importo > 0.0){
+						importo = impo->importo * 11.23 * cnum;
+					}else if(impo->tipo == 2 && impo->importo > 0.0){
+						importo = (impo->importo * 250.00) / (comb);
+					}else if(impo->tipo == 3 && impo->importo > 0.0){
+						importo = impo->importo * 4500.00;
+					}else{
+						importo = 0.0;
+					}
+				//L'utente ha indovinato quattro numeri su 5
+				}else if(cnum == 4){
+					if(impo->tipo == 1 && impo->importo > 0.0){
+						importo = impo->importo * 11.23 * cnum;
+					}else if(impo->tipo == 2 && impo->importo > 0.0){
+						importo = (impo->importo * 250.00) / (comb);
+					}else if(impo->tipo == 3 && impo->importo > 0.0){
+						importo = (impo->importo * 4500.00) / (comb);
+					}else if(impo->tipo == 4 && impo->importo > 0.0){
+						importo = impo->importo * 120000.00;
+					}else{
+						importo = 0.0;
+					}
+				//L'utente ha indovinato cinque numeri su 5
+				}else if(cnum == 5){
+					if(impo->tipo == 1 && impo->importo > 0.0){
+						importo = impo->importo * 11.23 * cnum;
+					}else if(impo->tipo == 2 && impo->importo > 0.0){
+						importo = (impo->importo * 250.00) / (comb);
+					}else if(impo->tipo == 3 && impo->importo > 0.0){
+						importo = (impo->importo * 4500.00) / (comb);
+					}else if(impo->tipo == 4 && impo->importo > 0.0){
+						importo = (impo->importo * 120000.00) / (comb);
+					}else if(impo->tipo == 5 && impo->importo > 0.0){
+						importo = impo->importo * 6000000.00;
+					}else{
+						importo = 0.0;
+					}
 				}
-				registerVincita(vincite, g->username, g->giorno, g->mese, g->anno, g->ora, g->min, r->nome_ruota, num0, impo0, 1);								
+				//Inserimento dei dati calcolati nella lista degli importi
+				fillListaImporti(&impo0, importo, impo->tipo);
 			}
-			
+			registerVincita(vincite, g->username, g->giorno, g->mese, g->anno, g->ora, g->min, r->nome_ruota, num0, impo0, 1);							
 		}
-		g = g->next;
 	}
 }
 
 //Funzione di assegnamento della giocata da nuova (ancora in corso) a vecchia (passata)
 //e di assegnamento della vincita tra quelle vecchie
-void AssegnaGiocata(struct giocata *vecchie, struct vincita **v, struct giocata *nuove, char **ex_ruote, int** m, int n_giorno, int giorno, int mese, int anno, int hour, int min, int sec){
+void AssegnaGiocata(struct giocata **vecchie, struct vincita **v, struct giocata *nuove, char **ex_ruote, int** m, int n_giorno, int giorno, int mese, int anno, int hour, int min, int sec){
 	struct giocata *g;
 	
 	for(g = nuove; g != NULL; g = g->next){		
-		registerGiocata(&vecchie, g->username, n_giorno, giorno, mese, anno, hour, min, sec, g->r, g->num, g->impo, 1);
+		registerGiocata(vecchie, g->username, n_giorno, giorno, mese, anno, hour, min, sec, g->r, g->num, g->impo, 1);
 		AssegnaVincita(vecchie, v, ex_ruote, m);
 	}
 }
@@ -973,8 +1007,7 @@ void openFileGiocate(struct giocata **g0){
 	double importo;	
 	
 	//Apertura del file delle giocate in lettura
-	FILE *file = fopen("UsersGiocate.txt", "r");
-	printf("[PADRE] fopen UsersGiocate.txt\n");
+	FILE *file = fopen("FileRegistri/UsersGiocate.txt", "r");
 	if(file == NULL){
 		printf("Impossibile creare il file delle giocate!\n");
 		exit(1);
@@ -1085,7 +1118,7 @@ void openFileRegister(struct user **u0){
 	memset(&password, '\0', sizeof(password));
 	memset(&cl_ip, '\0', sizeof(cl_ip));
 	
-	FILE *file = fopen("UsersRegister.txt", "r");
+	FILE *file = fopen("FileRegistri/UsersRegister.txt", "r");
 	if(file == NULL){
 		printf("[LOG] Impossibile creare il file degli utenti registrati!\n");
 		exit(1);
@@ -1109,7 +1142,7 @@ bool openFileBlocked(char *cl_sk){
 	long secondi;
 	time_t seconds;
 	
-	FILE *file = fopen("ClientBlocked.txt", "r");
+	FILE *file = fopen("FileRegistri/ClientBlocked.txt", "r");
 	if(file == NULL){
 		printf("[LOG] Impossibile creare il file degli utenti bloccati!\n");
 		exit(1);
@@ -1156,7 +1189,7 @@ void openFileVincite(struct vincita **v0){
 	int day, month, year, hour, min, n, numero, j;
 	double importo;	
 
-	FILE *file = fopen("UsersVincite.txt", "r");
+	FILE *file = fopen("FileRegistri/UsersVincite.txt", "r");
 	if(file == NULL){
 		printf("[LOG] Impossibile creare il file delle vincite!\n");
 		exit(1);
@@ -1247,7 +1280,7 @@ void openFileEstrazioni(struct estrazioni *e0, char **ex_ruote, int **m){
 	int ng, day, month, year, hour, min, sec, i, j;
 	
 	//Apertura del file delle giocate in lettura
-	FILE *file = fopen("Estrazioni.txt", "r");
+	FILE *file = fopen("FileRegistri/Estrazioni.txt", "r");
 	if(file == NULL){
 		printf("Impossibile creare il file delle vincite!\n");
 		exit(1);
@@ -1368,56 +1401,60 @@ char AssegnaLettera(char *cmd){
 
 //Funzione di riempimento della lista delle ruote
 bool fillListaRuote_Cl(struct ruote **r0, char *ruota){
-	struct ruote *q, *p;
+	struct ruote *q, *p, *s;
 	
 	//Controllo se il client ha gia' inserito quella ruota
 	if(*r0 != NULL){
-		for(q = *r0; q != 0; q = q->next){
-			if(!strcmp(q->nome_ruota, ruota))
+		for(s = *r0; s != 0; s = s->next){
+			if(!strcmp(s->nome_ruota, ruota))
 				return 1;
 		}
 	}
 	
-	for(q = *r0; q != 0; q = q->next)
-		p = q;
+	for(s = *r0; (s != 0); s = s->next)
+		p = s;
 		
 	q = (struct ruote*)malloc(sizeof(struct ruote));
 	
 	strcpy(q->nome_ruota, ruota);
-	q->next = NULL;
+	q->next = s;
 
 	if(*r0 == 0)
 		*r0 = q;
 	else
 		p->next = q;
+
+	//free(q);
 	
 	return 0;
 }
 
 //Funzione di riempimento della lista dei numeri
 bool fillListaNumeri_Cl(struct numeri **n0, int numero){
-	struct numeri *q, *p;
+	struct numeri *q, *p, *s;
 	
 	//Controllo se il client ha gia' inserito quel numero
 	if(*n0 != 0){
-		for(q = *n0; q != 0; q = q->next){
-			if(q->numero == numero)
+		for(s = *n0; s != 0; s = s->next){
+			if(s->numero == numero)
 				return 1;
 		}
 	}
 	
-	for(q = *n0; q != 0; q = q->next)
-		p = q;
+	for(s = *n0; (s != 0); s = s->next)
+		p = s;
 		
 	q = (struct numeri*)malloc(sizeof(struct numeri));
 	
 	q->numero = numero;
-	q->next = NULL;
+	q->next = s;
 
 	if(*n0 == 0)
 		*n0 = q;
 	else
 		p->next = q;
+
+	//free(q);
 	
 	return 0;
 }
@@ -1468,8 +1505,9 @@ void stampaIstruzioneHelp(char *command){
 	}else if(!strcmp("vedi_vincite", command)){
 		printf("Richiede al server tutte le vincite del client\n");
 	}else if(!strcmp("esci", command)){
-		printf("Termina il client");
+		printf("Effettua il logout e la disconnessione dal server\n");
 	}else{
+		printf("Hai ricercato un comando non disponibile o errato!\nI comandi disponibili sono : \n- signup\n- login\n- invia_giocata\n- vedi_giocate\n- vedi_estrazione\n- vedi_vincite\n- esci\n");
 		return;
 	}
 }
@@ -1500,6 +1538,8 @@ bool recvFromServerFlag(int sd){
 	memset(&dim, '\0', sizeof(dim));
 	
 	ret = recv(sd, (void*)dim, 2, 0);
+
+	
 	
 	if(ret < 0){
 		perror("Receive errata di un flag da parte del server!\n");
@@ -1521,8 +1561,12 @@ void recvFromServer(int sd, int stato){
 	memset(&dim, '\0', sizeof(dim));
 	
 	ret = recv(sd, (void*)dim, 2, 0);
+
+	//printf("[recvFromServer] dim - %s\n", dim);
 	
 	len = atoi(dim);				//string -> int
+
+	//printf("[recvFromServer] len - %d\n", len);
 	
 	if(ret < 0){
 		perror("Receive errata della lunghezza da parte del server!\n");
@@ -1532,6 +1576,9 @@ void recvFromServer(int sd, int stato){
 	memset(&buffer, '\0', sizeof(buffer));
 	
 	ret = recv(sd, (void*)buffer, len, 0);
+
+	//printf("[recvFromServer] buffer - %s\n", buffer);
+
 	if(ret < 0){
 		perror("Receive errata della stringa da parte del server!\n");
 		exit(1);
@@ -1575,13 +1622,10 @@ void SendToServerCmd(int sd, char c){
 	struct numeri *num;
 	struct importi *impo;
 	
-	//Allocazione in memoria dinamica
-	r = (struct ruote*)malloc(sizeof(struct ruote));
-	r = NULL;
-	num = (struct numeri*)malloc(sizeof(struct numeri));
-	num = NULL;
-	impo = (struct importi*)malloc(sizeof(struct importi));
-	impo = NULL;
+	r = 0;
+	num = 0;
+	impo = 0;
+	
 	
 	memset(&command, '\0', sizeof(command));
 	memset(&opzione, '\0', sizeof(opzione));
@@ -1603,6 +1647,7 @@ void SendToServerCmd(int sd, char c){
 			break;
 		case 's' :
 			// !signup
+
 			scanf("%s", username);
 			scanf("%s", password);
 			
@@ -1662,11 +1707,10 @@ void SendToServerCmd(int sd, char c){
 					do{
 						//Lettura della ruota che il client inserisce
 						scanf("%s", buffer);
-						/*Controlli :
-							- sul doppio inserimento di una ruota 
-							- sulla opzione successiva 
-							- sul nome della ruota
-						*/
+						//Controlli :
+						//	- sul doppio inserimento di una ruota 
+						//	- sulla opzione successiva 
+						//	- sul nome della ruota
 						if(checkRuota(buffer)){
 							check = fillListaRuote_Cl(&r, buffer);
 							if(check){
@@ -1727,13 +1771,16 @@ void SendToServerCmd(int sd, char c){
 					//Usciti dal ciclo l'ultima scanf ha preso la stringa -i 
 					
 					cont = 1;
+					ch = ' ';
 					
 					do{
+
 						if(cont <= contN){
+
 							scanf("%s", buffer);
 
 							importo = atof(buffer);
-						
+
 							//Invio degli importi
 							if(importo < 0.0){
 								printf("Non puoi inserire importi negativi!\nRiprova a inviare la giocata!\n");
@@ -1748,6 +1795,7 @@ void SendToServerCmd(int sd, char c){
 							
 							//Estrae il carattere inviato
 							ch=getchar();
+
 						}else{
 							printf("Hai inserito piu' importi che numeri.\n");
 							return;
@@ -1755,12 +1803,12 @@ void SendToServerCmd(int sd, char c){
 					}while(ch != '\n');
 									
 					sendToServerChar(sd, c);
-					
+
 					//Puntatori alle strutture : per scorrere le liste e mandare i dati al server
 					struct ruote *p = r;
 					struct numeri *q = num;
 					struct importi *s = impo;
-					
+
 					//Scorrimento della lista
 					//Invio delle ruote al server					
 					while(p){
@@ -2058,6 +2106,8 @@ void SendToServerCmd(int sd, char c){
 					
 					j = recvFromInt(sd);
 					
+					/*
+
 					if(j > 0){
 						printf("\n");
 						
@@ -2078,9 +2128,11 @@ void SendToServerCmd(int sd, char c){
 						printf("\n");
 						printf("\n");
 					}
+
+					*/
 				}
 			}else{
-				printf("Devi effettuare prima il login per inviare la giocata.\n");
+				printf("Devi effettuare prima il login.\n");
 				printf("Se non sei ancora registrato basta digitare il comando !signup e inserire username e password.\n");
 				return;
 			}	
@@ -2102,9 +2154,9 @@ void SendToServerCmd(int sd, char c){
 				printf("Log out non effettuato con successo! Riprova!\n");
 			}
 			break;
-		default :
+		default : 
 			printf("Comando errato!\n");
-			return;
+			break;
 	}
 }
 

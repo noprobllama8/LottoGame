@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
+#include <math.h>
 #include "library.h"
 
 #define USERLOG 100
@@ -84,6 +85,8 @@ int main(int argc, char const *argv[]){
 	users = 0;
 	vincite = 0;
 	ex = 0;
+
+	//printf("[PADRE] 1 - vecchie : %p\n", vecchie);
 	
 	//Il processo figlio termina forzatamente se anche il processo padre viene terminato forzatamente
 	signal(SIGINT, intHandler);
@@ -111,6 +114,8 @@ int main(int argc, char const *argv[]){
 				
 			//L'estrazione verrà effettuata solamente il Martedì, Giovedì e Sabato
 			if(n_giorno == 2 || n_giorno == 4 || n_giorno == 6){
+
+				//sleep(periodo);
 				
 				strftime(buffer, 1024, "%d", l_time);
 				giorno = atoi(buffer);
@@ -229,7 +234,7 @@ int main(int argc, char const *argv[]){
 					
 						inet_ntop(AF_INET, &(cl_addr.sin_addr), cl_sk, INET_ADDRSTRLEN);
 
-				        //apertura del file degli utenti bloccati
+				        	//apertura del file degli utenti bloccati
 						ipbloccato = openFileBlocked(cl_sk);					
 						
 						//Inviare messaggio di errore al client (mettere un flag se trovo l'ip)
@@ -279,10 +284,11 @@ int main(int argc, char const *argv[]){
 							
 							//Assegnamento della giocata
 							//Passaggio dalle giocate nuove alle giocate vecchie al momento dell'estrazione
-							AssegnaGiocata(vecchie, &vincite, nuove, ex_ruote, m, n_giorno, giorno, mese, anno, hour, min, sec);
-							
+							AssegnaGiocata(&vecchie, &vincite, nuove, ex_ruote, m, n_giorno, giorno, mese, anno, hour, min, sec);
+
 							//deallocazione della struttura nuove
 							g = nuove;
+							
 							while(g){
 								gio = g;
 								g = g->next;
@@ -437,8 +443,10 @@ int main(int argc, char const *argv[]){
 								//si effetuerà il conteggio degli elementi presenti nella lista
 								//0 -> vecchie
 								//1 -> nuove
+
 								if(!flag){
 									g = vecchie;
+									//printf("[PADRE] 3 - vecchie : %p\n", vecchie);
 									while(g){
 										if(!strcmp(g->username, username)){
 											j++;
@@ -461,6 +469,7 @@ int main(int argc, char const *argv[]){
 								//giocate passate
 								if(!flag){
 									g = vecchie;
+									//printf("[PADRE] 4 - vecchie : %p\n", vecchie);
 									while(g){
 										//scorro la lista delle giocate
 										//in base all'username 
@@ -649,14 +658,22 @@ int main(int argc, char const *argv[]){
 									}
 									v = v->next;
 								}
-															
+									
+								//Conteggio delle vincite a carico dell'utente loggato precedentemente					
 								conteggio = 0;
 								for(v = vincite; v; v = v->next){
-									conteggio++;
+									if(!strcmp(v->username, username)){
+										conteggio++;
+									}
 								}
 								
 								sendToInt(i, conteggio);
 								
+								/*
+
+								//Il client riceve altri valori da quelli inviati dal server
+								//Solo in questo caso la send e la receive non funzionano correttamente
+
 								if(conteggio > 0){
 									
 									v = vincite;
@@ -670,34 +687,67 @@ int main(int argc, char const *argv[]){
 									while(v){
 										if(!strcmp(v->username, username)){
 											for(impo = v->impo; impo; impo = impo->next){
-												if(impo->tipo == 1)
+												if(impo->tipo == 1){
 													estratto += impo->importo;
-												else if(impo->tipo == 2)
+												}else if(impo->tipo == 2){
 													ambo += impo->importo;
-												else if(impo->tipo == 3)
+												}else if(impo->tipo == 3){
 													terno += impo->importo;
-												else if(impo->tipo == 4)
+												}else if(impo->tipo == 4){
 													quaterna += impo->importo;
-												else if(impo->tipo == 5)
+												}else if(impo->tipo == 5){
 													cinquina += impo->importo;
+												}
 											}
 										}
 										v = v->next;
 									}
+
+									memset(&buffer, '\0', sizeof(buffer));
 									
-									//Conversione e invio delle variabili somma calcolate sopra
-									gcvt(estratto, 11, buffer);
+									//Conversione e invio delle variabili somma calcolate sopra					
+									if(estratto > 0)
+										gcvt(estratto, 8, buffer);
+									else
+										strcpy(buffer, "0.000000");
 									sendTo(i, buffer);
-									gcvt(ambo, 11, buffer);
+		
+									memset(&buffer, '\0', sizeof(buffer));
+
+									if(ambo > 0)
+										gcvt(ambo, 8, buffer);
+									else
+										strcpy(buffer, "0.000000");					
 									sendTo(i, buffer);
-									gcvt(terno, 11, buffer);
+
+									memset(&buffer, '\0', sizeof(buffer));
+
+									if(terno > 0)
+										gcvt(terno, 8, buffer);
+									else
+										strcpy(buffer, "0.000000");
 									sendTo(i, buffer);
-									gcvt(quaterna, 11, buffer);
+
+									memset(&buffer, '\0', sizeof(buffer));
+									
+									if(quaterna > 0)
+										gcvt(quaterna, 8, buffer);
+									else
+										strcpy(buffer, "0.000000");
 									sendTo(i, buffer);
-									gcvt(cinquina, 11, buffer);
+
+									memset(&buffer, '\0', sizeof(buffer));
+									
+									if(cinquina > 0)
+										gcvt(cinquina, 8, buffer);
+									else
+										strcpy(buffer, "0.000000");
 									sendTo(i, buffer);
+	
+									memset(&buffer, '\0', sizeof(buffer));
 								}
-								
+
+								*/
 								break;
 							case 'q' :
 								//Comando !esci
@@ -711,7 +761,7 @@ int main(int argc, char const *argv[]){
 								printf("Ricevuto comando errato!\n");
 								break;
 						}//fine switch
-					}//fine else (i == sock)
+					} //fine else (i == sock)
 				}//fine FD_ISSET
 			}//fine for(i = 0; i <= fdmax; i++)
 		}
